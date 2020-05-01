@@ -14,16 +14,12 @@ PreSetup("MQ2React");
 // Function Declarations
 VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine);
 BOOL TLOReact(PCHAR szIndex, MQ2TYPEVAR& Ret);
-VOID LoadConfig(std::string configname);
-int ReactExists(std::string nickname);
+VOID LoadConfig(const char* configname);
+int GetReactIdx(const std::string& nickname);
 void PrintHelp();
 
 // Global Declarations
 Yaml::Node root;
-
-
-// Creating a default config file name
-constexpr auto CONFIG_FILE = "mq2react.ini";
 
 // Called once, when the plugin is to initialize
 PLUGIN_API VOID InitializePlugin(VOID)
@@ -55,7 +51,7 @@ PLUGIN_API VOID OnZoned(VOID)
 PLUGIN_API VOID SetGameState(DWORD GameState)
 {
 	DebugSpewAlways("MQ2React::SetGameState()");
-	LoadConfig(CONFIG_FILE);
+	LoadConfig(INIFileName);
 	//if (GameState==GAMESTATE_INGAME)
 	// create custom windows if theyre not set up, etc
 }
@@ -93,7 +89,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Action, szLine, 4);
 		if (!strlen(Action)) PrintHelp();
 
-		if (ReactExists(Nickname) == -1) {
+		if (GetReactIdx(Nickname) == -1) {
 			Yaml::Node& NewReact = root[pCharInfo->Name]["reacts"].PushFront();
 			NewReact["nickname"] = Nickname;
 			NewReact["condition"] = Condition;
@@ -105,7 +101,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		int react_idx = ReactExists(Nickname);
+		int react_idx = GetReactIdx(Nickname);
 		if (react_idx != -1) {
 			root[pCharInfo->Name]["reacts"].Erase(react_idx);
 		}
@@ -114,7 +110,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		int react_idx = ReactExists(Nickname);
+		int react_idx = GetReactIdx(Nickname);
 		if (react_idx != -1) {
 			root[pCharInfo->Name]["reacts"][react_idx]["enabled"] = "1";
 		}
@@ -123,7 +119,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		int react_idx = ReactExists(Nickname);
+		int react_idx = GetReactIdx(Nickname);
 		if (react_idx != -1) {
 			root[pCharInfo->Name]["reacts"][react_idx]["enabled"] = "0";
 		}
@@ -136,13 +132,13 @@ BOOL TLOReact(PCHAR szIndex, MQ2TYPEVAR& Ret)
 	return FALSE;
 }
 
-void LoadConfig(std::string configname)
+void LoadConfig(const char* configname)
 {
 	Yaml::Parse(root, configname);
 
 	PCHARINFO pCharInfo = GetCharInfo();
 
-	if (!_FileExists(configname.c_str())) {
+	if (!_FileExists(configname)) {
 		Yaml::Serialize(root, configname);
 	}
 
@@ -185,7 +181,7 @@ void PrintHelp()
 @param nickname Name of the react to look for.
 @return -1 if the item wasn't found, otherwise its index in the list.
 */
-int ReactExists(std::string nickname) {
+int GetReactIdx(const std::string& nickname) {
 	PCHARINFO pCharInfo = GetCharInfo();
 	Yaml::Node& Reacts = root[pCharInfo->Name]["reacts"];
 
