@@ -126,12 +126,6 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 	}
 }
 
-BOOL TLOReact(PCHAR szIndex, MQ2TYPEVAR& Ret)
-{
-
-	return FALSE;
-}
-
 void LoadConfig(const char* configname)
 {
 	Yaml::Parse(root, configname);
@@ -196,4 +190,60 @@ int GetReactIdx(const std::string& nickname) {
 	}
 	// Default return
 	return -1;
+}
+
+class MQ2ReactType : public MQ2Type {
+public:
+	enum Members {
+		Action,
+		Condition,
+		Enabled
+	};
+
+	MQ2ReactType() :MQ2Type("React")
+	{
+		TypeMember(Action);
+		TypeMember(Condition);
+		TypeMember(Enabled);
+	}
+	~MQ2ReactType() {}
+
+	bool GetMember(MQ2VARPTR VarPtr, PCHAR Member, PCHAR Index, MQ2TYPEVAR& Dest)
+	{
+		PMQ2TYPEMEMBER pMember = MQ2ReactType::FindMember(Member);
+		if (!pMember)
+			return false;
+		if (!pLocalPlayer)
+			return false;
+		switch ((Members)pMember->ID) {
+			case Action:
+				return true;
+			case Condition:
+				return true;
+			case Enabled:
+				return true;
+			default:
+				return false;
+				break;
+		}
+	}
+
+	bool FromData(MQ2VARPTR& VarPtr, MQ2TYPEVAR& Source)
+	{
+		return false;
+	}
+	bool FromString(MQ2VARPTR& VarPtr, PCHAR Source)
+	{
+		return false;
+	}
+private:
+
+};
+
+class MQ2ReactType* pReactType = nullptr;
+BOOL TLOReact(char* szIndex, MQ2TYPEVAR& Dest)
+{
+	Dest.DWord = 1;
+	Dest.Type = pReactType;
+	return true;
 }
