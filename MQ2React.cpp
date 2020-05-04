@@ -17,7 +17,7 @@ VOID LoadConfig(const char* configname);
 void PrintHelp();
 
 // Global Declarations
-Yaml::Node root;
+static Yaml::Node root;
 
 /*
 @brief Determines if a react exists based on its nickname.
@@ -159,13 +159,15 @@ PLUGIN_API VOID OnPulse(VOID)
 
 void LoadConfig(const char* configname)
 {
-	Yaml::Parse(root, configname);
-
 	PCHARINFO pCharInfo = GetCharInfo();
+	if (!pCharInfo) return;
 
 	if (!_FileExists(configname)) {
 		Yaml::Serialize(root, configname);
 	}
+
+	// Must call after the file check or you could error out.
+	Yaml::Parse(root, configname);
 
 	// Try and load the current character's reacts, if they aren't in the config yet, then add
 	// them with a blank list of reacts.
@@ -189,6 +191,7 @@ void LoadConfig(const char* configname)
 	}
 }
 
+class MQ2ReactType* pReactType = nullptr;
 class MQ2ReactType : public MQ2Type {
 public:
 	enum Members {
@@ -217,12 +220,38 @@ public:
 			return false;
 		if (!pLocalPlayer)
 			return false;
+
+		PCHARINFO pCharInfo = GetCharInfo();
 		switch ((Members)pMember->ID) {
 			case Action:
+				if (Index && Index[0] != '\0') {
+					int idx = GetReactIdx(Index);
+					if (idx != -1) {
+						strcpy_s(_buf, root[pCharInfo->Name]["reacts"][idx]["action"].As<std::string>().c_str());
+						Dest.Ptr = &_buf[0];
+						Dest.Type = pStringType;
+					}
+				}
 				return true;
 			case Condition:
+				if (Index && Index[0] != '\0') {
+					int idx = GetReactIdx(Index);
+					if (idx != -1) {
+						strcpy_s(_buf, root[pCharInfo->Name]["reacts"][idx]["condition"].As<std::string>().c_str());
+						Dest.Ptr = &_buf[0];
+						Dest.Type = pStringType;
+					}
+				}
 				return true;
 			case Enabled:
+				if (Index && Index[0] != '\0') {
+					int idx = GetReactIdx(Index);
+					if (idx != -1) {
+						strcpy_s(_buf, root[pCharInfo->Name]["reacts"][idx]["enabled"].As<std::string>().c_str());
+						Dest.Ptr = &_buf[0];
+						Dest.Type = pStringType;
+					}
+				}
 				return true;
 			default:
 				return false;
@@ -239,10 +268,9 @@ public:
 		return false;
 	}
 private:
-
+	CHAR _buf[MAX_STRING];
 };
 
-class MQ2ReactType* pReactType = nullptr;
 BOOL TLOReact(char* szIndex, MQ2TYPEVAR& Dest)
 {
 	Dest.DWord = 1;
