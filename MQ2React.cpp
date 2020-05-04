@@ -145,9 +145,9 @@ PLUGIN_API VOID OnZoned(VOID)
 PLUGIN_API VOID SetGameState(DWORD GameState)
 {
 	DebugSpewAlways("MQ2React::SetGameState()");
-	LoadConfig(INIFileName);
-	//if (GameState==GAMESTATE_INGAME)
-	// create custom windows if theyre not set up, etc
+	if (GameState == GAMESTATE_INGAME) {
+		LoadConfig(INIFileName);
+	}
 }
 
 // This is called every time MQ pulses
