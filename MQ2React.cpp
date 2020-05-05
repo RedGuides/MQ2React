@@ -11,6 +11,9 @@
 PLUGIN_VERSION(0.1);
 PreSetup("MQ2React");
 
+// Constants
+constexpr auto REACT_SLEEP = 50;
+
 // Global Declarations
 static Yaml::Node root;
 
@@ -21,6 +24,8 @@ static Yaml::Node root;
 */
 int GetReactIdx(const std::string& nickname) {
 	PCHARINFO pCharInfo = GetCharInfo();
+	if (!pCharInfo) return -1;
+
 	Yaml::Node& Reacts = root[pCharInfo->Name]["reacts"];
 
 	int react_idx = 0;
@@ -39,6 +44,8 @@ int GetReactIdx(const std::string& nickname) {
 
 void PrintReacts() {
 	PCHARINFO pCharInfo = GetCharInfo();
+	if (!pCharInfo) return;
+
 	Yaml::Node& Reacts = root[pCharInfo->Name]["reacts"];
 
 	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++) {
@@ -121,9 +128,8 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 			root[pCharInfo->Name]["reacts"][react_idx]["enabled"] = "0";
 		}
 	}
-	if (!_stricmp(Verb, "list")) {
+	if (!_stricmp(Verb, "list"))
 		PrintReacts();
-	}
 }
 
 class MQ2ReactType : public MQ2Type {
@@ -219,9 +225,8 @@ void LoadConfig(const char* configname)
 	PCHARINFO pCharInfo = GetCharInfo();
 	if (!pCharInfo) return;
 
-	if (!_FileExists(configname)) {
+	if (!_FileExists(configname))
 		Yaml::Serialize(root, configname);
-	}
 
 	// Must call after the file check or you could error out.
 	Yaml::Parse(root, configname);
@@ -263,10 +268,6 @@ PLUGIN_API VOID ShutdownPlugin(VOID)
 	DebugSpewAlways("Shutting down MQ2React");
 	RemoveCommand("/react");
 	RemoveMQ2Data("React");
-	//Remove commands, MQ2Data items, hooks, etc.
-	//RemoveMQ2Benchmark(bmMyBenchmark);
-	//RemoveCommand("/mycommand");
-	//RemoveXMLFile("MQUI_MyXMLFile.xml");
 }
 
 // Called after entering a new zone
@@ -279,9 +280,8 @@ PLUGIN_API VOID OnZoned(VOID)
 PLUGIN_API VOID SetGameState(DWORD GameState)
 {
 	DebugSpewAlways("MQ2React::SetGameState()");
-	if (GameState == GAMESTATE_INGAME) {
+	if (GameState == GAMESTATE_INGAME)
 		LoadConfig(INIFileName);
-	}
 }
 
 // This is called every time MQ pulses
@@ -289,5 +289,43 @@ PLUGIN_API VOID OnPulse(VOID)
 {
 	// DONT leave in this debugspew, even if you leave in all the others
 	//DebugSpewAlways("MQ2React::OnPulse()");
+	static int pulse = 0;
+	static auto action_queue = std::queue<std::string>();
+
+	if (GetGameState() != GAMESTATE_INGAME)
+		return;
+
+	PCHARINFO pCharInfo = GetCharInfo();
+	if (!pCharInfo) return;
+
+	// We've not yet loaded our configuration if mini-yaml finds root node is None
+	if (root.IsNone()) return;
+
+	if (++pulse < REACT_SLEEP)
+		return;
+
+	// Time to wake-up
+	pulse = 0;
+
+	// Loop through every react we have and then add any ready-to-go reacts to our action_queue
+	Yaml::Node& Reacts = root[pCharInfo->Name]["reacts"];
+	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++) {
+		Yaml::Node& react = (*itr).second;
+		
+		double result = 0;
+		std::string condition = react["condition"].As<std::string>();
+		// ParseMacroData will resolve any TLOs in our action string
+		ParseMacroData(&condition[0], condition.size());
+		// Calculate will return a DWORD result, if the result is non-zero it's true and we'll add to our queue
+		Calculate(&condition[0], result);
+
+		if (result != 0) {
+			action_queue.push(react["action"].As<std::string>());
+		}
+	}
+
+	// Pop off an element from our reaction queue, if any, and execute it with EzCommand
+
+
 }
 
