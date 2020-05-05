@@ -157,6 +157,7 @@ public:
 
 		PCHARINFO pCharInfo = GetCharInfo();
 		switch ((Members)pMember->ID) {
+			DebugSpewAlways("%d -- %s\n", (Members)pMember->ID, pCharInfo->Name);
 			case Action:
 				if (Index && Index[0] != '\0') {
 					int idx = GetReactIdx(Index);
@@ -253,6 +254,7 @@ PLUGIN_API VOID InitializePlugin(VOID)
 	DebugSpewAlways("Initializing MQ2React");
 	AddCommand("/react", ReactCommand);
 	AddMQ2Data("React", TLOReact);
+	pReactType = new MQ2ReactType;
 }
 
 // Called once, when the plugin is to shutdown
