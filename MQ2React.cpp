@@ -313,11 +313,15 @@ PLUGIN_API VOID OnPulse(VOID)
 		Yaml::Node& react = (*itr).second;
 		
 		double result = 0;
-		std::string condition = react["condition"].As<std::string>();
+
+		// Convert our condition from a std::string to something usable by mq2
+		char szLine[MAX_STRING] = { 0 };
+		strcpy_s(szLine, react["condition"].As<std::string>().c_str());
+
 		// ParseMacroData will resolve any TLOs in our action string
-		ParseMacroData(&condition[0], condition.size());
+		ParseMacroData(szLine, MAX_STRING);
 		// Calculate will return a DWORD result, if the result is non-zero it's true and we'll add to our queue
-		Calculate(&condition[0], result);
+		Calculate(szLine, result);
 
 		if (result != 0) {
 			action_queue.push(react["action"].As<std::string>());
@@ -325,7 +329,18 @@ PLUGIN_API VOID OnPulse(VOID)
 	}
 
 	// Pop off an element from our reaction queue, if any, and execute it with EzCommand
+	if (action_queue.size() > 0) {
+		char szCmd[MAX_STRING] = { 0 };
+		strcpy_s(szCmd, action_queue.front().c_str());
 
+		// Parse macro data in the action
+		ParseMacroData(szCmd, MAX_STRING);
+		
+		// use EzCommand to execute
+		EzCommand(szCmd);
+
+		action_queue.pop();
+	}
 
 }
 
