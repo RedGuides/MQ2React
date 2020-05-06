@@ -96,18 +96,21 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (!strlen(Nickname)) PrintHelp();
 
 		root["reacts"].Erase(Nickname);
+		Yaml::Serialize(root, INIFileName);
 	}
 	if (!_stricmp(Verb, "enable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
+		Yaml::Serialize(root, INIFileName);
 	}
 	if (!_stricmp(Verb, "disable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
+		Yaml::Serialize(root, INIFileName);
 	}
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
@@ -296,23 +299,29 @@ PLUGIN_API VOID OnPulse(VOID)
 	pulse = 0;
 
 	// Loop through every react we have and then add any ready-to-go reacts to our action_queue
-	Yaml::Node& Reacts = root[pCharInfo->Name]["reacts"];
+	Yaml::Node& Reacts = root["reacts"];
 	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++) {
+		const std::string nickname = (*itr).first;
 		Yaml::Node& react = (*itr).second;
 		
-		double result = 0;
+		// Only check the react if it is enabled for the current character on the current server
+		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].IsNone()) {
+			if (root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].As<std::string>().compare("enabled") == 0) {
+				double result = 0;
 
-		// Convert our condition from a std::string to something usable by mq2
-		char szLine[MAX_STRING] = { 0 };
-		strcpy_s(szLine, react["condition"].As<std::string>().c_str());
+				// Convert our condition from a std::string to something usable by mq2
+				char szLine[MAX_STRING] = { 0 };
+				strcpy_s(szLine, react["condition"].As<std::string>().c_str());
 
-		// ParseMacroData will resolve any TLOs in our action string
-		ParseMacroData(szLine, MAX_STRING);
-		// Calculate will return a DWORD result, if the result is non-zero it's true and we'll add to our queue
-		Calculate(szLine, result);
+				// ParseMacroData will resolve any TLOs in our action string
+				ParseMacroData(szLine, MAX_STRING);
+				// Calculate will return a DWORD result, if the result is non-zero it's true and we'll add to our queue
+				Calculate(szLine, result);
 
-		if (result != 0) {
-			action_queue.push(react["action"].As<std::string>());
+				if (result != 0) {
+					action_queue.push(react["action"].As<std::string>());
+				}
+			}
 		}
 	}
 
