@@ -4,3 +4,5 @@
 
 /.vs/MQ2React/v16
 /Intermediate
+*.sln
+*.user
