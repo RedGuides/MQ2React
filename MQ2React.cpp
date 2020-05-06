@@ -226,7 +226,7 @@ void LoadConfig(const char* configname)
 
 	// Make sure the YAML Config is well structed -- Example globals section
 	if (root["globals"].IsNone())
-		root["globals"]["globalexample"] = "${Me.CombatState.NotEqual[COMBAT]} && ${Me.PctHPs} <= 25";
+		root["globals"]["GlobalExample"] = "${Me.CombatState.NotEqual[COMBAT]} && ${Me.PctHPs} <= 25";
 
 	// Make sure the YAML Config is well structed -- Example reacts section
 	if (root["reacts"].IsNone()) {
