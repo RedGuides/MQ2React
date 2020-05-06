@@ -21,7 +21,7 @@ static Yaml::Node root;
 @brief Determines if a react exists based on its nickname.
 @param nickname Name of the react to look for.
 @return -1 if the item wasn't found, otherwise its index in the list.
-*/
+
 int GetReactIdx(const std::string& nickname) {
 	PCHARINFO pCharInfo = GetCharInfo();
 	if (!pCharInfo) return -1;
@@ -40,18 +40,12 @@ int GetReactIdx(const std::string& nickname) {
 	// Default return
 	return -1;
 }
-
+*/
 
 void PrintReacts() {
-	PCHARINFO pCharInfo = GetCharInfo();
-	if (!pCharInfo) return;
-
-	Yaml::Node& Reacts = root[pCharInfo->Name]["reacts"];
-
-	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++) {
-		Yaml::Node& react = (*itr).second;
-		WriteChatfSafe("%s",react["nickname"].As<std::string>().c_str());
-	}
+	Yaml::Node& Reacts = root["reacts"];
+	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++)
+		WriteChatfSafe("%s",(*itr).first.c_str());
 }
 
 void PrintHelp()
@@ -92,41 +86,28 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Action, szLine, 4);
 		if (!strlen(Action)) PrintHelp();
 
-		if (GetReactIdx(Nickname) == -1) {
-			Yaml::Node& NewReact = root[pCharInfo->Name]["reacts"].PushBack();
-			NewReact["nickname"] = Nickname;
-			NewReact["condition"] = Condition;
-			NewReact["action"] = Action;
-			NewReact["enabled"] = "0";
-		}
+		root["reacts"][Nickname]["condition"] = Condition;
+		root["reacts"][Nickname]["action"] = Action;
+		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
 		Yaml::Serialize(root, INIFileName);
 	}
 	if (!_stricmp(Verb, "remove")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		int react_idx = GetReactIdx(Nickname);
-		if (react_idx != -1) {
-			root[pCharInfo->Name]["reacts"].Erase(react_idx);
-		}
+		root["reacts"].Erase(Nickname);
 	}
 	if (!_stricmp(Verb, "enable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		int react_idx = GetReactIdx(Nickname);
-		if (react_idx != -1) {
-			root[pCharInfo->Name]["reacts"][react_idx]["enabled"] = "1";
-		}
+		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
 	}
 	if (!_stricmp(Verb, "disable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		int react_idx = GetReactIdx(Nickname);
-		if (react_idx != -1) {
-			root[pCharInfo->Name]["reacts"][react_idx]["enabled"] = "0";
-		}
+		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
 	}
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
@@ -137,7 +118,8 @@ public:
 	enum Members {
 		Action,
 		Condition,
-		Enabled
+		Enabled,
+		Global
 	};
 
 	MQ2ReactType() :MQ2Type("React")
@@ -145,6 +127,7 @@ public:
 		TypeMember(Action);
 		TypeMember(Condition);
 		TypeMember(Enabled);
+		TypeMember(Global);
 	}
 	~MQ2ReactType() {}
 
@@ -166,9 +149,8 @@ public:
 			DebugSpewAlways("%d -- %s\n", (Members)pMember->ID, pCharInfo->Name);
 			case Action:
 				if (Index && Index[0] != '\0') {
-					int idx = GetReactIdx(Index);
-					if (idx != -1) {
-						strcpy_s(_buf, root[pCharInfo->Name]["reacts"][idx]["action"].As<std::string>().c_str());
+					if (!root["reacts"][Index]["action"].IsNone()) {
+						strcpy_s(_buf, root["reacts"][Index]["action"].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
 						Dest.Type = pStringType;
 					}
@@ -176,9 +158,8 @@ public:
 				return true;
 			case Condition:
 				if (Index && Index[0] != '\0') {
-					int idx = GetReactIdx(Index);
-					if (idx != -1) {
-						strcpy_s(_buf, root[pCharInfo->Name]["reacts"][idx]["condition"].As<std::string>().c_str());
+					if (!root["reacts"][Index]["condition"].IsNone()) {
+						strcpy_s(_buf, root["reacts"][Index]["condition"].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
 						Dest.Type = pStringType;
 					}
@@ -186,14 +167,25 @@ public:
 				return true;
 			case Enabled:
 				if (Index && Index[0] != '\0') {
-					int idx = GetReactIdx(Index);
-					if (idx != -1) {
-						strcpy_s(_buf, root[pCharInfo->Name]["reacts"][idx]["enabled"].As<std::string>().c_str());
+					if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Index].IsNone()) {
+						if (root[EQADDR_SERVERNAME][pCharInfo->Name][Index].As<std::string>().compare("enabled") == 0) {
+							Dest.Int = 1;
+						}
+						else {
+							Dest.Int = 0;
+						}
+						Dest.Type = pBoolType;
+					}
+				}
+				return true;
+			case Global:
+				if (Index && Index[0] != '\0') {
+					if (!root["globals"][Index].IsNone()) {
+						strcpy_s(_buf, root["globals"][Index].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
 						Dest.Type = pStringType;
 					}
 				}
-				return true;
 			default:
 				return false;
 				break;
@@ -224,6 +216,7 @@ void LoadConfig(const char* configname)
 {
 	PCHARINFO pCharInfo = GetCharInfo();
 	if (!pCharInfo) return;
+	if (!EQADDR_SERVERNAME[0]) return;
 
 	if (!_FileExists(configname))
 		Yaml::Serialize(root, configname);
@@ -231,26 +224,21 @@ void LoadConfig(const char* configname)
 	// Must call after the file check or you could error out.
 	Yaml::Parse(root, configname);
 
-	// Try and load the current character's reacts, if they aren't in the config yet, then add
-	// them with a blank list of reacts.
-	Yaml::Node& char_config = root[pCharInfo->Name];
+	// Make sure the YAML Config is well structed -- Example globals section
+	if (root["globals"].IsNone())
+		root["globals"]["globalexample"] = "${Me.CombatState.NotEqual[COMBAT]} && ${Me.PctHPs} <= 25";
 
-	// If the character doesn't exist we'll create a configuration file entry for them and provide
-	// a disabled default react entry in case they want to edit the config file instead of use ingame commands.
-	if (char_config.IsNone()) {
-		if (EQADDR_SERVERNAME[0]) {
-			root[pCharInfo->Name]["Server"] = std::string(EQADDR_SERVERNAME);
-		}
-		else {
-			root[pCharInfo->Name]["Server"] = "Unknown";
-		}
-		Yaml::Node& DefaultReact = root[pCharInfo->Name]["reacts"].PushFront();
-		DefaultReact["nickname"] = "DefaultExample";
-		DefaultReact["condition"] = "${Me.PctHPs} == 100 && ${Me.CombatState.NotEqual[COMBAT]}";
-		DefaultReact["action"] = "/echo If you enable this it will spam you with echos when you're at full health out of combat.";
-		DefaultReact["enabled"] = "0";
-		Yaml::Serialize(root, configname);
+	// Make sure the YAML Config is well structed -- Example reacts section
+	if (root["reacts"].IsNone()) {
+		root["reacts"]["ExampleReact"]["condition"] = "${Me.PctHPs} == 100 && ${Me.CombatState.NotEqual[COMBAT]}";
+		root["reacts"]["ExampleReact"]["action"] = "/multiline ; /echo Default Example react Disables itself when you're at 100%HP and out of Combat ; /delay 5 ; /react disable ExampleReact";
 	}
+
+	// Make sure the YAML Config is well structure -- Per character react list
+	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone())
+		root[EQADDR_SERVERNAME][pCharInfo->Name]["ExampleReact"] = "enabled";
+
+	Yaml::Serialize(root, configname);
 }
 
 // Called once, when the plugin is to initialize
