@@ -141,6 +141,9 @@ public:
 	*/
 	bool GetMember(MQ2VARPTR VarPtr, PCHAR Member, PCHAR Index, MQ2TYPEVAR& Dest)
 	{
+		// We create a copy of our root node as IsNone() actually will create nonexistent nodes when
+		// checked. This causes failed TLO checks to actually modify our yaml.
+		Yaml::Node rootcopy = root;
 		PMQ2TYPEMEMBER pMember = MQ2ReactType::FindMember(Member);
 		if (!pMember)
 			return false;
@@ -152,8 +155,8 @@ public:
 			DebugSpewAlways("%d -- %s\n", (Members)pMember->ID, pCharInfo->Name);
 			case Action:
 				if (Index && Index[0] != '\0') {
-					if (!root["reacts"][Index]["action"].IsNone()) {
-						strcpy_s(_buf, root["reacts"][Index]["action"].As<std::string>().c_str());
+					if (!rootcopy["reacts"][Index]["action"].IsNone()) {
+						strcpy_s(_buf, rootcopy["reacts"][Index]["action"].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
 						Dest.Type = pStringType;
 					}
@@ -161,8 +164,8 @@ public:
 				return true;
 			case Condition:
 				if (Index && Index[0] != '\0') {
-					if (!root["reacts"][Index]["condition"].IsNone()) {
-						strcpy_s(_buf, root["reacts"][Index]["condition"].As<std::string>().c_str());
+					if (!rootcopy["reacts"][Index]["condition"].IsNone()) {
+						strcpy_s(_buf, rootcopy["reacts"][Index]["condition"].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
 						Dest.Type = pStringType;
 					}
@@ -170,8 +173,8 @@ public:
 				return true;
 			case Enabled:
 				if (Index && Index[0] != '\0') {
-					if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Index].IsNone()) {
-						if (root[EQADDR_SERVERNAME][pCharInfo->Name][Index].As<std::string>().compare("enabled") == 0) {
+					if (!rootcopy[EQADDR_SERVERNAME][pCharInfo->Name][Index].IsNone()) {
+						if (rootcopy[EQADDR_SERVERNAME][pCharInfo->Name][Index].As<std::string>().compare("enabled") == 0) {
 							Dest.Int = 1;
 						}
 						else {
@@ -183,12 +186,13 @@ public:
 				return true;
 			case Global:
 				if (Index && Index[0] != '\0') {
-					if (!root["globals"][Index].IsNone()) {
-						strcpy_s(_buf, root["globals"][Index].As<std::string>().c_str());
+					if (!rootcopy["globals"][Index].IsNone()) {
+						strcpy_s(_buf, rootcopy["globals"][Index].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
 						Dest.Type = pStringType;
 					}
 				}
+				return true;
 			default:
 				return false;
 				break;
