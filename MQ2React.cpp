@@ -252,7 +252,7 @@ void LoadConfig(const char* configname)
 PLUGIN_API VOID InitializePlugin()
 {
 	DebugSpewAlways("Initializing MQ2React");
-	AddCommand("/react", ReactCommand);
+	AddCommand("/react", ReactCommand, 0, 0); // Disable parsing for command arguments so added reacts don't get parsed
 	AddMQ2Data("React", TLOReact);
 	pReactType = new MQ2ReactType;
 }
