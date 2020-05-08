@@ -112,6 +112,8 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
 		Yaml::Serialize(root, INIFileName);
 	}
+	if (!_stricmp(Verb, "reload"))
+		Yaml::Parse(root, INIFileName);
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
 }
