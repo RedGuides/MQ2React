@@ -4,9 +4,8 @@
 // PLUGIN_API is only to be used for callbacks.  All existing callbacks at this time
 // are shown below. Remove the ones your plugin does not use.  Always use Initialize
 // and Shutdown for setup and cleanup, do NOT do it in DllMain.
-
-#include "yaml/Yaml.hpp"
 #include "../MQ2Plugin.h"
+#include "yaml/Yaml.hpp"
 
 PLUGIN_VERSION(0.1);
 PreSetup("MQ2React");
@@ -45,7 +44,7 @@ int GetReactIdx(const std::string& nickname) {
 void PrintReacts() {
 	Yaml::Node& Reacts = root["reacts"];
 	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++)
-		WriteChatfSafe("%s",(*itr).first.c_str());
+		WriteChatf("%s",(*itr).first.c_str());
 }
 
 void PrintHelp()
@@ -67,8 +66,6 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 {
 	char Verb[MAX_STRING] = { 0 };
 	char Nickname[MAX_STRING] = { 0 };
-	char Condition[MAX_STRING] = { 0 };
-	char Action[MAX_STRING] = { 0 };
 	PCHARINFO pCharInfo = GetCharInfo();
 
 	GetArg(Verb, szLine, 1);
@@ -77,6 +74,9 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		PrintHelp();
 	}
 	if (!_stricmp(Verb, "add")) {
+		char Condition[MAX_STRING] = { 0 };
+		char Action[MAX_STRING] = { 0 };
+
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
@@ -152,7 +152,6 @@ public:
 
 		PCHARINFO pCharInfo = GetCharInfo();
 		switch ((Members)pMember->ID) {
-			DebugSpewAlways("%d -- %s\n", (Members)pMember->ID, pCharInfo->Name);
 			case Action:
 				if (Index && Index[0] != '\0') {
 					if (!rootcopy["reacts"][Index]["action"].IsNone()) {
@@ -174,7 +173,7 @@ public:
 			case Enabled:
 				if (Index && Index[0] != '\0') {
 					if (!rootcopy[EQADDR_SERVERNAME][pCharInfo->Name][Index].IsNone()) {
-						if (rootcopy[EQADDR_SERVERNAME][pCharInfo->Name][Index].As<std::string>().compare("enabled") == 0) {
+						if (rootcopy[EQADDR_SERVERNAME][pCharInfo->Name][Index].As<std::string>() == "enabled") {
 							Dest.Int = 1;
 						}
 						else {
@@ -195,7 +194,6 @@ public:
 				return true;
 			default:
 				return false;
-				break;
 		}
 	}
 
@@ -208,7 +206,7 @@ public:
 		return false;
 	}
 private:
-	CHAR _buf[MAX_STRING];
+	CHAR _buf[MAX_STRING] = { 0 };
 };
 class MQ2ReactType* pReactType = nullptr;
 
@@ -249,7 +247,7 @@ void LoadConfig(const char* configname)
 }
 
 // Called once, when the plugin is to initialize
-PLUGIN_API VOID InitializePlugin(VOID)
+PLUGIN_API VOID InitializePlugin()
 {
 	DebugSpewAlways("Initializing MQ2React");
 	AddCommand("/react", ReactCommand);
@@ -258,29 +256,24 @@ PLUGIN_API VOID InitializePlugin(VOID)
 }
 
 // Called once, when the plugin is to shutdown
-PLUGIN_API VOID ShutdownPlugin(VOID)
+PLUGIN_API VOID ShutdownPlugin()
 {
 	DebugSpewAlways("Shutting down MQ2React");
 	RemoveCommand("/react");
 	RemoveMQ2Data("React");
 }
 
-// Called after entering a new zone
-PLUGIN_API VOID OnZoned(VOID)
-{
-	DebugSpewAlways("MQ2React::OnZoned()");
-}
-
 // Called once directly after initialization, and then every time the gamestate changes
 PLUGIN_API VOID SetGameState(DWORD GameState)
 {
 	DebugSpewAlways("MQ2React::SetGameState()");
-	if (GameState == GAMESTATE_INGAME)
+	// This way we make sure we do not load the config while zoning.
+	if (GameState == GAMESTATE_INGAME && root.IsNone())
 		LoadConfig(INIFileName);
 }
 
 // This is called every time MQ pulses
-PLUGIN_API VOID OnPulse(VOID)
+PLUGIN_API VOID OnPulse()
 {
 	// DONT leave in this debugspew, even if you leave in all the others
 	//DebugSpewAlways("MQ2React::OnPulse()");
@@ -310,7 +303,7 @@ PLUGIN_API VOID OnPulse(VOID)
 		
 		// Only check the react if it is enabled for the current character on the current server
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].IsNone()) {
-			if (root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].As<std::string>().compare("enabled") == 0) {
+			if (root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].As<std::string>() == "enabled") {
 				double result = 0;
 
 				// Convert our condition from a std::string to something usable by mq2
@@ -330,7 +323,7 @@ PLUGIN_API VOID OnPulse(VOID)
 	}
 
 	// Pop off an element from our reaction queue, if any, and execute it with EzCommand
-	if (action_queue.size() > 0) {
+	if (!action_queue.empty()) {
 		char szCmd[MAX_STRING] = { 0 };
 		strcpy_s(szCmd, action_queue.front().c_str());
 
