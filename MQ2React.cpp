@@ -84,7 +84,8 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (!strlen(Nickname)) PrintHelp();
 
 		Yaml::Parse(root, INIFileName);
-		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
+		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
+			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
 		Yaml::Serialize(root, INIFileName);
 	}
 	if (!_stricmp(Verb, "disable")) {
@@ -92,7 +93,8 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (!strlen(Nickname)) PrintHelp();
 
 		Yaml::Parse(root, INIFileName);
-		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
+		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
+			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
 		Yaml::Serialize(root, INIFileName);
 	}
 	if (!_stricmp(Verb, "reload"))
