@@ -12,12 +12,14 @@ example global condition. The configuration file is case sensitive.
 
 ## Commands
 * `/react help` - Displays the below list of commands.
-* `/noparse /react add <nickname> <condition> <action>` - add a new reaction to your config with <condition> and <action> labeled <nickname>.
+* `/react add <nickname> <condition> <action>` - add a new reaction to your config with <condition> and <action> labeled <nickname>.
 New reacts are disabled by default. `/noparse` is required to avoid your condition being parsed before addition.
 * `/react remove <nickname>` - remove a reaction from your config file that has the label <nickname> .
 * `/react enable <nickname>` - enable a reaction with label <nickname>.
 * `/react disable <nickname>` - disable a reaction with label <nickname>.
 * `/react list` - Display all condition nicknames.
+* `/react reload` - Reloads the mq2react config.
+* `/react save` - Saves the current in-memory configuration to the react config. add, remove, enable, and disable do this automatically.
 
 Currently the only way to add globals is directly to the configuration file.
 
