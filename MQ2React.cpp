@@ -16,31 +16,6 @@ constexpr auto REACT_SLEEP = 50;
 // Global Declarations
 static Yaml::Node root;
 
-/*
-@brief Determines if a react exists based on its nickname.
-@param nickname Name of the react to look for.
-@return -1 if the item wasn't found, otherwise its index in the list.
-
-int GetReactIdx(const std::string& nickname) {
-	PCHARINFO pCharInfo = GetCharInfo();
-	if (!pCharInfo) return -1;
-
-	Yaml::Node& Reacts = root[pCharInfo->Name]["reacts"];
-
-	int react_idx = 0;
-	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++) {
-		Yaml::Node& react = (*itr).second;
-
-		if (react["nickname"].As<std::string>() == nickname) {
-			return react_idx;
-		}
-		react_idx++;
-	}
-	// Default return
-	return -1;
-}
-*/
-
 void PrintReacts() {
 	Yaml::Node& Reacts = root["reacts"];
 	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++)
@@ -53,11 +28,13 @@ void PrintHelp()
 	WriteChatf("Ineract with MQ2React via /react <verb> <optarg> <optarg> <optarg>");
 	WriteChatf("Reaction configuration is per character name per character name in mq2react.ini.");
 	WriteChatf("/react help - display this message.");
-	WriteChatf("/noparse /react add <nickname> <condition> <action> - add a new reaction to your config with <condition> and <action> labeled <nickname>. Disabled by default.");
+	WriteChatf("/react add <nickname> <condition> <action> - add a new reaction to your config with <condition> and <action> labeled <nickname>. Disabled by default.");
 	WriteChatf("/react remove <nickname> - remove a reaction from your config file that has the label <nickname> .");
 	WriteChatf("/react enable <nickname> - enable a reaction with label <nickname>.");
 	WriteChatf("/react disable <nickname> - disable a reaction with label <nickname>.");
 	WriteChatf("/react list - Display all condition nicknames.");
+	WriteChatf("/react reload - Reloads the mq2react config.");
+	WriteChatf("/react save - Saves the current in-memory configuration to the react config. add, remove, enable, and disable do this automatically.");
 }
 
 // Parse /react <verb> <opt:nickname> <opt:condition> <opt:action>
@@ -86,6 +63,9 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Action, szLine, 4);
 		if (!strlen(Action)) PrintHelp();
 
+		// We reload the YAML file in case it was changed prior to our last load so we 
+		// do not erase changes made elsewhere. This pattern continues below.
+		Yaml::Parse(root, INIFileName);
 		root["reacts"][Nickname]["condition"] = Condition;
 		root["reacts"][Nickname]["action"] = Action;
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
@@ -95,6 +75,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
+		Yaml::Parse(root, INIFileName);
 		root["reacts"].Erase(Nickname);
 		Yaml::Serialize(root, INIFileName);
 	}
@@ -102,6 +83,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
+		Yaml::Parse(root, INIFileName);
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
 		Yaml::Serialize(root, INIFileName);
 	}
@@ -109,11 +91,14 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
+		Yaml::Parse(root, INIFileName);
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
 		Yaml::Serialize(root, INIFileName);
 	}
 	if (!_stricmp(Verb, "reload"))
 		Yaml::Parse(root, INIFileName);
+	if (!_stricmp(Verb, "save"))
+		Yaml::Serialize(root, INIFileName);
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
 }
