@@ -23,6 +23,56 @@ void PrintReacts() {
 		WriteChatf("%s",(*itr).first.c_str());
 }
 
+void SaveConfig(const char* configname) {
+	try {
+		Yaml::Serialize(root, configname);
+	}
+	catch (const Yaml::Exception e) {
+		char Error[MAX_STRING] = { 0 };
+		strcpy_s(Error, e.Message());
+		WriteChatf("Error saving  mq2react configuration:");
+		WriteChatf(Error);
+	}
+}
+
+void LoadConfig(const char* configname)
+{
+	PCHARINFO pCharInfo = GetCharInfo();
+	if (!pCharInfo) return;
+	if (!EQADDR_SERVERNAME[0]) return;
+
+	if (!_FileExists(configname))
+		SaveConfig(configname);
+
+	// Must call after the file check or you could error out.
+	try {
+		Yaml::Parse(root, configname);
+	}
+	catch (const Yaml::Exception e) {
+		char Error[MAX_STRING] = { 0 };
+		strcpy_s(Error, e.Message());
+		WriteChatf("Error parsingv mq2react configuration:");
+		WriteChatf(Error);
+	}
+
+	// Make sure the YAML Config is well structed -- Example globals section
+	if (root["globals"].IsNone())
+		root["globals"]["GlobalExample"] = "${Me.CombatState.NotEqual[COMBAT]} && ${Me.PctHPs} <= 25";
+
+	// Make sure the YAML Config is well structed -- Example reacts section
+	if (root["reacts"].IsNone()) {
+		root["reacts"]["ExampleReact"]["condition"] = "${Me.PctHPs} == 100 && ${Me.CombatState.NotEqual[COMBAT]}";
+		root["reacts"]["ExampleReact"]["action"] = "/multiline ; /echo Default Example react Disables itself when you're at 100%HP and out of Combat ; /delay 5 ; /react disable ExampleReact";
+	}
+
+	// Make sure the YAML Config is well structure -- Per character react list
+	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone())
+		root[EQADDR_SERVERNAME][pCharInfo->Name]["ExampleReact"] = "enabled";
+
+	// Save the default values we created if we created any
+	SaveConfig(configname);
+}
+
 void PrintHelp()
 {
 	WriteChatf("MQ2React");
@@ -66,42 +116,42 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 
 		// We reload the YAML file in case it was changed prior to our last load so we 
 		// do not erase changes made elsewhere. This pattern continues below.
-		Yaml::Parse(root, CONFIG_FILE);
+		LoadConfig(CONFIG_FILE);
 		root["reacts"][Nickname]["condition"] = Condition;
 		root["reacts"][Nickname]["action"] = Action;
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
-		Yaml::Serialize(root, CONFIG_FILE);
+		SaveConfig(CONFIG_FILE);
 	}
 	if (!_stricmp(Verb, "remove")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		Yaml::Parse(root, CONFIG_FILE);
+		LoadConfig(CONFIG_FILE);
 		root["reacts"].Erase(Nickname);
-		Yaml::Serialize(root, CONFIG_FILE);
+		SaveConfig(CONFIG_FILE);
 	}
 	if (!_stricmp(Verb, "enable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		Yaml::Parse(root, CONFIG_FILE);
+		LoadConfig(CONFIG_FILE);
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
 			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
-		Yaml::Serialize(root, CONFIG_FILE);
+		SaveConfig(CONFIG_FILE);
 	}
 	if (!_stricmp(Verb, "disable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		Yaml::Parse(root, CONFIG_FILE);
+		LoadConfig(CONFIG_FILE);
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
 			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
-		Yaml::Serialize(root, CONFIG_FILE);
+		SaveConfig(CONFIG_FILE);
 	}
 	if (!_stricmp(Verb, "reload"))
-		Yaml::Parse(root, CONFIG_FILE);
+		SaveConfig(CONFIG_FILE);
 	if (!_stricmp(Verb, "save"))
-		Yaml::Serialize(root, CONFIG_FILE);
+		LoadConfig(CONFIG_FILE);
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
 }
@@ -205,35 +255,6 @@ BOOL TLOReact(char* szIndex, MQ2TYPEVAR& Dest)
 	Dest.DWord = 1;
 	Dest.Type = pReactType;
 	return true;
-}
-
-void LoadConfig(const char* configname)
-{
-	PCHARINFO pCharInfo = GetCharInfo();
-	if (!pCharInfo) return;
-	if (!EQADDR_SERVERNAME[0]) return;
-
-	if (!_FileExists(configname))
-		Yaml::Serialize(root, configname);
-
-	// Must call after the file check or you could error out.
-	Yaml::Parse(root, configname);
-
-	// Make sure the YAML Config is well structed -- Example globals section
-	if (root["globals"].IsNone())
-		root["globals"]["GlobalExample"] = "${Me.CombatState.NotEqual[COMBAT]} && ${Me.PctHPs} <= 25";
-
-	// Make sure the YAML Config is well structed -- Example reacts section
-	if (root["reacts"].IsNone()) {
-		root["reacts"]["ExampleReact"]["condition"] = "${Me.PctHPs} == 100 && ${Me.CombatState.NotEqual[COMBAT]}";
-		root["reacts"]["ExampleReact"]["action"] = "/multiline ; /echo Default Example react Disables itself when you're at 100%HP and out of Combat ; /delay 5 ; /react disable ExampleReact";
-	}
-
-	// Make sure the YAML Config is well structure -- Per character react list
-	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone())
-		root[EQADDR_SERVERNAME][pCharInfo->Name]["ExampleReact"] = "enabled";
-
-	Yaml::Serialize(root, configname);
 }
 
 // Called once, when the plugin is to initialize
