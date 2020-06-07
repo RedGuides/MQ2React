@@ -135,7 +135,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (!strlen(Nickname)) PrintHelp();
 
 		LoadConfig();
-		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
+		if (!root["reacts"][Nickname].IsNone())
 			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
 		SaveConfig();
 	}
@@ -144,7 +144,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (!strlen(Nickname)) PrintHelp();
 
 		LoadConfig();
-		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
+		if (!root["reacts"][Nickname].IsNone())
 			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
 		SaveConfig();
 	}
