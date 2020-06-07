@@ -12,7 +12,7 @@ PreSetup("MQ2React");
 
 // Constants
 constexpr auto REACT_SLEEP = 50;
-constexpr auto CONFIG_FILE = "mq2react.yaml";
+static const std::string CONFIG_FILE = std::string(gszINIPath) + "\\MQ2React.yaml";
 
 // Global Declarations
 static Yaml::Node root;
@@ -23,9 +23,9 @@ void PrintReacts() {
 		WriteChatf("%s",(*itr).first.c_str());
 }
 
-void SaveConfig(const char* configname) {
+void SaveConfig() {
 	try {
-		Yaml::Serialize(root, configname);
+		Yaml::Serialize(root, CONFIG_FILE.c_str());
 	}
 	catch (const Yaml::Exception e) {
 		char Error[MAX_STRING] = { 0 };
@@ -35,18 +35,18 @@ void SaveConfig(const char* configname) {
 	}
 }
 
-void LoadConfig(const char* configname)
+void LoadConfig()
 {
 	PCHARINFO pCharInfo = GetCharInfo();
 	if (!pCharInfo) return;
 	if (!EQADDR_SERVERNAME[0]) return;
 
-	if (!_FileExists(configname))
-		SaveConfig(configname);
+	if (!_FileExists(CONFIG_FILE.c_str()))
+		SaveConfig();
 
 	// Must call after the file check or you could error out.
 	try {
-		Yaml::Parse(root, configname);
+		Yaml::Parse(root, CONFIG_FILE.c_str());
 	}
 	catch (const Yaml::Exception e) {
 		char Error[MAX_STRING] = { 0 };
@@ -70,7 +70,7 @@ void LoadConfig(const char* configname)
 		root[EQADDR_SERVERNAME][pCharInfo->Name]["ExampleReact"] = "enabled";
 
 	// Save the default values we created if we created any
-	SaveConfig(configname);
+	SaveConfig();
 }
 
 void PrintHelp()
@@ -116,42 +116,42 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 
 		// We reload the YAML file in case it was changed prior to our last load so we 
 		// do not erase changes made elsewhere. This pattern continues below.
-		LoadConfig(CONFIG_FILE);
+		LoadConfig();
 		root["reacts"][Nickname]["condition"] = Condition;
 		root["reacts"][Nickname]["action"] = Action;
 		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
-		SaveConfig(CONFIG_FILE);
+		SaveConfig();
 	}
 	if (!_stricmp(Verb, "remove")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		LoadConfig(CONFIG_FILE);
+		LoadConfig();
 		root["reacts"].Erase(Nickname);
-		SaveConfig(CONFIG_FILE);
+		SaveConfig();
 	}
 	if (!_stricmp(Verb, "enable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		LoadConfig(CONFIG_FILE);
+		LoadConfig();
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
 			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
-		SaveConfig(CONFIG_FILE);
+		SaveConfig();
 	}
 	if (!_stricmp(Verb, "disable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		LoadConfig(CONFIG_FILE);
+		LoadConfig();
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname].IsNone())
 			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
-		SaveConfig(CONFIG_FILE);
+		SaveConfig();
 	}
 	if (!_stricmp(Verb, "reload"))
-		SaveConfig(CONFIG_FILE);
+		LoadConfig();
 	if (!_stricmp(Verb, "save"))
-		LoadConfig(CONFIG_FILE);
+		SaveConfig();
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
 }
@@ -280,7 +280,7 @@ PLUGIN_API VOID SetGameState(DWORD GameState)
 	DebugSpewAlways("MQ2React::SetGameState()");
 	// This way we make sure we do not load the config while zoning.
 	if (GameState == GAMESTATE_INGAME && root.IsNone())
-		LoadConfig(CONFIG_FILE);
+		LoadConfig();
 }
 
 // This is called every time MQ pulses
