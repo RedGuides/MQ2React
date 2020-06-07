@@ -289,7 +289,6 @@ PLUGIN_API VOID OnPulse()
 	// DONT leave in this debugspew, even if you leave in all the others
 	//DebugSpewAlways("MQ2React::OnPulse()");
 	static int pulse = 0;
-	static auto action_queue = std::queue<std::string>();
 
 	if (GetGameState() != GAMESTATE_INGAME)
 		return;
@@ -327,25 +326,13 @@ PLUGIN_API VOID OnPulse()
 				Calculate(szLine, result);
 
 				if (result != 0) {
-					action_queue.push(react["action"].As<std::string>());
+					char szAction[MAX_STRING] = { 0 };
+					strcpy_s(szAction, react["action"].As<std::string>().c_str());
+					ParseMacroData(szAction, MAX_STRING);
+					EzCommand(szAction);
 				}
 			}
 		}
 	}
-
-	// Pop off an element from our reaction queue, if any, and execute it with EzCommand
-	if (!action_queue.empty()) {
-		char szCmd[MAX_STRING] = { 0 };
-		strcpy_s(szCmd, action_queue.front().c_str());
-
-		// Parse macro data in the action
-		ParseMacroData(szCmd, MAX_STRING);
-		
-		// use EzCommand to execute
-		EzCommand(szCmd);
-
-		action_queue.pop();
-	}
-
 }
 
