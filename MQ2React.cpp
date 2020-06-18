@@ -4,15 +4,15 @@
 // PLUGIN_API is only to be used for callbacks.  All existing callbacks at this time
 // are shown below. Remove the ones your plugin does not use.  Always use Initialize
 // and Shutdown for setup and cleanup, do NOT do it in DllMain.
-#include "../MQ2Plugin.h"
-#include "yaml/Yaml.hpp"
+#include <mq/Plugin.h>
+#include <Yaml.hpp>
 
 PreSetup("MQ2React");
 PLUGIN_VERSION(0.1);
 
 // Constants
 constexpr int REACT_SLEEP = 50;
-static const std::string CONFIG_FILE = std::string(gszINIPath) + "\\MQ2React.yaml";
+static const std::string CONFIG_FILE = std::string(gPathConfig) + "\\MQ2React.yaml";
 
 // Global Declarations
 static Yaml::Node root;
@@ -180,25 +180,25 @@ public:
 	* React.Condition[nickname] -- Returns the condition associated with the react 'nickname'
 	* React.Enabled[nickname] -- Returns if the react 'nickname' is enabled or not
 	*/
-	bool GetMember(MQ2VARPTR VarPtr, PCHAR Member, PCHAR Index, MQ2TYPEVAR& Dest)
+	bool GetMember(MQVarPtr VarPtr, PCHAR Member, PCHAR Index, MQTypeVar& Dest)
 	{
 		// We create a copy of our root node as IsNone() actually will create nonexistent nodes when
 		// checked. This causes failed TLO checks to actually modify our yaml.
 		Yaml::Node rootcopy = root;
-		PMQ2TYPEMEMBER pMember = MQ2ReactType::FindMember(Member);
+		MQTypeMember* pMember = MQ2ReactType::FindMember(Member);
 		if (!pMember)
 			return false;
 		if (!pLocalPlayer)
 			return false;
 
 		PCHARINFO pCharInfo = GetCharInfo();
-		switch ((Members)pMember->ID) {
+		switch (pMember->ID) {
 			case Action:
 				if (Index && Index[0] != '\0') {
 					if (!rootcopy["reacts"][Index]["action"].IsNone()) {
 						strcpy_s(_buf, rootcopy["reacts"][Index]["action"].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
-						Dest.Type = pStringType;
+						Dest.Type = mq::datatypes::pStringType;
 					}
 				}
 				return true;
@@ -207,7 +207,7 @@ public:
 					if (!rootcopy["reacts"][Index]["condition"].IsNone()) {
 						strcpy_s(_buf, rootcopy["reacts"][Index]["condition"].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
-						Dest.Type = pStringType;
+						Dest.Type = mq::datatypes::pStringType;
 					}
 				}
 				return true;
@@ -220,7 +220,7 @@ public:
 						else {
 							Dest.Int = 0;
 						}
-						Dest.Type = pBoolType;
+						Dest.Type = mq::datatypes::pBoolType;
 					}
 				}
 				return true;
@@ -229,7 +229,7 @@ public:
 					if (!rootcopy["globals"][Index].IsNone()) {
 						strcpy_s(_buf, rootcopy["globals"][Index].As<std::string>().c_str());
 						Dest.Ptr = &_buf[0];
-						Dest.Type = pStringType;
+						Dest.Type = mq::datatypes::pStringType;
 					}
 				}
 				return true;
@@ -238,11 +238,11 @@ public:
 		}
 	}
 
-	bool FromData(MQ2VARPTR& VarPtr, MQ2TYPEVAR& Source)
+	bool FromData(MQVarPtr& VarPtr, MQTypeVar& Source)
 	{
 		return false;
 	}
-	bool FromString(MQ2VARPTR& VarPtr, PCHAR Source)
+	bool FromString(MQVarPtr& VarPtr, PCHAR Source)
 	{
 		return false;
 	}
@@ -250,7 +250,7 @@ private:
 	CHAR _buf[MAX_STRING] = { 0 };
 };
 
-BOOL TLOReact(char* szIndex, MQ2TYPEVAR& Dest)
+bool TLOReact(const char* szIndex, MQTypeVar& Dest)
 {
 	Dest.DWord = 1;
 	Dest.Type = pReactType;
@@ -258,7 +258,7 @@ BOOL TLOReact(char* szIndex, MQ2TYPEVAR& Dest)
 }
 
 // Called once, when the plugin is to initialize
-PLUGIN_API VOID InitializePlugin()
+PLUGIN_API void InitializePlugin()
 {
 	DebugSpewAlways("Initializing MQ2React");
 	AddCommand("/react", ReactCommand, 0, 0); // Disable parsing for command arguments so added reacts don't get parsed
@@ -267,7 +267,7 @@ PLUGIN_API VOID InitializePlugin()
 }
 
 // Called once, when the plugin is to shutdown
-PLUGIN_API VOID ShutdownPlugin()
+PLUGIN_API void ShutdownPlugin()
 {
 	DebugSpewAlways("Shutting down MQ2React");
 	RemoveCommand("/react");
@@ -275,7 +275,7 @@ PLUGIN_API VOID ShutdownPlugin()
 }
 
 // Called once directly after initialization, and then every time the gamestate changes
-PLUGIN_API VOID SetGameState(DWORD GameState)
+PLUGIN_API void SetGameState(DWORD GameState)
 {
 	DebugSpewAlways("MQ2React::SetGameState()");
 	// This way we make sure we do not load the config while zoning.
@@ -284,7 +284,7 @@ PLUGIN_API VOID SetGameState(DWORD GameState)
 }
 
 // This is called every time MQ pulses
-PLUGIN_API VOID OnPulse()
+PLUGIN_API void OnPulse()
 {
 	// DONT leave in this debugspew, even if you leave in all the others
 	//DebugSpewAlways("MQ2React::OnPulse()");

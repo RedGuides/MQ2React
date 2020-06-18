@@ -10,17 +10,25 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemDefinitionGroup>
+    <PreBuildEvent>
+      <Command>if exist "$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), tools\build_scripts\Plugin_Versioning.ps1))\tools\build_scripts\Plugin_Versioning.ps1" powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -File "$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), tools\build_scripts\Plugin_Versioning.ps1))\tools\build_scripts\Plugin_Versioning.ps1" -ProjectName "$(MSBuildProjectName)" -ProjectDirectory $(MSBuildThisFileDirectory)</Command>
+      <Message>Updating version resource for $(MSBuildProjectName)...</Message>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
   <PropertyGroup Label="Globals">
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{0392F8A2-CC1D-4959-9EDA-71D4A8435168}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectGuid>{3A717AF5-30F9-446A-9DB2-93C6F6B6DB96}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <PreBuildEventUseInBuild>true</PreBuildEventUseInBuild>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
@@ -29,29 +37,29 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\Plugin.Release.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\Plugin.Debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), src\Plugin.props))\src\Plugin.props" Condition=" '$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), src\Plugin.props))' != '' " />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <_ProjectFileVersion>11.0.51106.1</_ProjectFileVersion>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="MQ2React.cpp">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="yaml\Yaml.cpp" />
+    <ClCompile Include="MQ2React.cpp" />
+    <ClCompile Include="..\..\contrib\mini-yaml\yaml\Yaml.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\MQ2Plugin.h" />
-    <ClInclude Include="yaml\Yaml.hpp" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="README.md" />
+    <ResourceCompile Include="MQ2React.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
