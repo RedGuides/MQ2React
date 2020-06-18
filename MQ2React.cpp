@@ -7,15 +7,16 @@
 #include "../MQ2Plugin.h"
 #include "yaml/Yaml.hpp"
 
-PLUGIN_VERSION(0.1);
 PreSetup("MQ2React");
+PLUGIN_VERSION(0.1);
 
 // Constants
-constexpr auto REACT_SLEEP = 50;
+constexpr int REACT_SLEEP = 50;
 static const std::string CONFIG_FILE = std::string(gszINIPath) + "\\MQ2React.yaml";
 
 // Global Declarations
 static Yaml::Node root;
+class MQ2ReactType* pReactType = nullptr;
 
 void PrintReacts() {
 	Yaml::Node& Reacts = root["reacts"];
@@ -248,7 +249,6 @@ public:
 private:
 	CHAR _buf[MAX_STRING] = { 0 };
 };
-class MQ2ReactType* pReactType = nullptr;
 
 BOOL TLOReact(char* szIndex, MQ2TYPEVAR& Dest)
 {
