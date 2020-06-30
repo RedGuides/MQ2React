@@ -82,6 +82,8 @@ void PrintHelp()
 	WriteChatf("Ineract with MQ2React via /react <verb> <optarg> <optarg> <optarg>");
 	WriteChatf("Reaction configuration is per character name per character name in mq2react.ini.");
 	WriteChatf("/react help - display this message.");
+	WriteChatf("/react globaladd <name> <condition> -- add a new global condition with <name> and condition <condition>.");
+	WriteChatf("/react globalrem <name> -- removes the global condition that matches <name>.");
 	WriteChatf("/react add <nickname> <condition> <action> - add a new reaction to your config with <condition> and <action> labeled <nickname>. Disabled by default.");
 	WriteChatf("/react remove <nickname> - remove a reaction from your config file that has the label <nickname> .");
 	WriteChatf("/react enable <nickname> - enable a reaction with label <nickname>.");
@@ -103,6 +105,27 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 
 	if (!_stricmp(Verb, "help")) {
 		PrintHelp();
+	}
+	if (!_stricmp(Verb, "globaladd")) {
+		char Condition[MAX_STRING] = { 0 };
+
+		GetArg(Nickname, szLine, 2);
+		if (!strlen(Nickname)) PrintHelp();
+
+		GetArg(Condition, szLine, 3);
+		if (!strlen(Condition)) PrintHelp();
+
+		LoadConfig();
+		root["globals"][Nickname] = Condition;
+		SaveConfig();
+	}
+	if (!_stricmp(Verb, "globalrem")) {
+		GetArg(Nickname, szLine, 2);
+		if (!strlen(Nickname)) PrintHelp();
+
+		LoadConfig();
+		root["globals"].Erase(Nickname);
+		SaveConfig();
 	}
 	if (!_stricmp(Verb, "add")) {
 		char Condition[MAX_STRING] = { 0 };
