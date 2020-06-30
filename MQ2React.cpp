@@ -54,6 +54,8 @@ void LoadConfig()
 		strcpy_s(Error, e.Message());
 		WriteChatf("Error parsingv mq2react configuration:");
 		WriteChatf(Error);
+		// Exit early to avoid rewriting the users file as 'root' will be empty
+		return;
 	}
 
 	// Make sure the YAML Config is well structed -- Example globals section
