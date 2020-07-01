@@ -353,7 +353,6 @@ PLUGIN_API VOID OnPulse()
 				if (result != 0) {
 					char szAction[MAX_STRING] = { 0 };
 					strcpy_s(szAction, react["action"].As<std::string>().c_str());
-					ParseMacroData(szAction, MAX_STRING);
 					EzCommand(szAction);
 				}
 			}
