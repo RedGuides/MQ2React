@@ -36,16 +36,20 @@ void SaveConfig() {
 	}
 }
 
-void LoadConfig()
+bool LoadConfig()
 {
 	PCHARINFO pCharInfo = GetCharInfo();
-	if (!pCharInfo) return;
-	if (!EQADDR_SERVERNAME[0]) return;
+	if (!pCharInfo) return false;
+	if (!EQADDR_SERVERNAME[0]) return false;
 
 	if (!_FileExists(CONFIG_FILE.c_str()))
 		SaveConfig();
 
 	// Must call after the file check or you could error out.
+	// NOTE: We probably need to call a root.Clear() here to make sure mq2react's in-memory
+	// tree matches the .yaml file if parsing failures occur. Hestitating on this at the
+	// moment as I'm unsure about unintended consequences of doing this.
+	// root.Clear();
 	try {
 		Yaml::Parse(root, CONFIG_FILE.c_str());
 	}
@@ -54,8 +58,9 @@ void LoadConfig()
 		strcpy_s(Error, e.Message());
 		WriteChatf("Error parsingv mq2react configuration:");
 		WriteChatf(Error);
-		// Exit early to avoid rewriting the users file as 'root' will be empty
-		return;
+		// Exit early to avoid rewriting the users file as 'root' will be empty.
+		// Notify we've uncessfully loaded the file.
+		return false;
 	}
 
 	// Make sure the YAML Config is well structed -- Example globals section
@@ -74,6 +79,9 @@ void LoadConfig()
 
 	// Save the default values we created if we created any
 	SaveConfig();
+
+	// Succesfully loaded the file
+	return true;
 }
 
 void PrintHelp()
@@ -97,6 +105,7 @@ void PrintHelp()
 // /help - print command help
 VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 {
+	bool loadsuccessful = false;
 	char Verb[MAX_STRING] = { 0 };
 	char Nickname[MAX_STRING] = { 0 };
 	PCHARINFO pCharInfo = GetCharInfo();
@@ -115,17 +124,21 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Condition, szLine, 3);
 		if (!strlen(Condition)) PrintHelp();
 
-		LoadConfig();
-		root["globals"][Nickname] = Condition;
-		SaveConfig();
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			root["globals"][Nickname] = Condition;
+			SaveConfig();
+		}
 	}
 	if (!_stricmp(Verb, "globalrem")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		LoadConfig();
-		root["globals"].Erase(Nickname);
-		SaveConfig();
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			root["globals"].Erase(Nickname);
+			SaveConfig();
+		}
 	}
 	if (!_stricmp(Verb, "add")) {
 		char Condition[MAX_STRING] = { 0 };
@@ -142,42 +155,54 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 
 		// We reload the YAML file in case it was changed prior to our last load so we 
 		// do not erase changes made elsewhere. This pattern continues below.
-		LoadConfig();
-		root["reacts"][Nickname]["condition"] = Condition;
-		root["reacts"][Nickname]["action"] = Action;
-		root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
-		SaveConfig();
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			root["reacts"][Nickname]["condition"] = Condition;
+			root["reacts"][Nickname]["action"] = Action;
+			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
+			SaveConfig();
+		}
 	}
 	if (!_stricmp(Verb, "remove")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		LoadConfig();
-		root["reacts"].Erase(Nickname);
-		SaveConfig();
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			root["reacts"].Erase(Nickname);
+			SaveConfig();
+		}
 	}
 	if (!_stricmp(Verb, "enable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		LoadConfig();
-		if (!root["reacts"][Nickname].IsNone())
-			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
-		SaveConfig();
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			if (!root["reacts"][Nickname].IsNone())
+				root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
+			SaveConfig();
+		}
 	}
 	if (!_stricmp(Verb, "disable")) {
 		GetArg(Nickname, szLine, 2);
 		if (!strlen(Nickname)) PrintHelp();
 
-		LoadConfig();
-		if (!root["reacts"][Nickname].IsNone())
-			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
-		SaveConfig();
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			if (!root["reacts"][Nickname].IsNone())
+				root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
+			SaveConfig();
+		}
 	}
 	if (!_stricmp(Verb, "reload"))
-		LoadConfig();
-	if (!_stricmp(Verb, "save"))
-		SaveConfig();
+		loadsuccessful = LoadConfig();
+	if (!_stricmp(Verb, "save")) {
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			SaveConfig();
+		}
+	}
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
 }
@@ -335,12 +360,12 @@ PLUGIN_API VOID OnPulse()
 	for (auto itr = Reacts.Begin(); itr != Reacts.End(); itr++) {
 		const std::string nickname = (*itr).first;
 		Yaml::Node& react = (*itr).second;
-		
+
 		// Only check the react if it is enabled for the current character on the current server
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].IsNone()) {
 			if (root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].As<std::string>() == "enabled") {
 				double result = 0;
-
+				DebugSpewAlways("Checking %s\n", nickname.c_str());
 				// Convert our condition from a std::string to something usable by mq2
 				char szLine[MAX_STRING] = { 0 };
 				strcpy_s(szLine, react["condition"].As<std::string>().c_str());
@@ -353,6 +378,7 @@ PLUGIN_API VOID OnPulse()
 				if (result != 0) {
 					char szAction[MAX_STRING] = { 0 };
 					strcpy_s(szAction, react["action"].As<std::string>().c_str());
+					DebugSpewAlways("Executing %s --> %s \n", nickname.c_str(), szAction);
 					EzCommand(szAction);
 				}
 			}
