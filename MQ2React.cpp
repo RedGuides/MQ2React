@@ -47,9 +47,10 @@ bool LoadConfig()
 
 	// Must call after the file check or you could error out.
 	// NOTE: We probably need to call a root.Clear() here to make sure mq2react's in-memory
-	// tree matches the .yaml file if parsing failures occur. Hestitating on this at the
-	// moment as I'm unsure about unintended consequences of doing this.
-	// root.Clear();
+	// tree matches the .yaml file if parsing failures occur. Waffling on this at the
+	// moment as I'm unsure about unintended consequences of doing this (react stops working
+	// until they fix their file for example).
+	root.Clear();
 	try {
 		Yaml::Parse(root, CONFIG_FILE.c_str());
 	}
@@ -336,8 +337,6 @@ PLUGIN_API VOID SetGameState(DWORD GameState)
 // This is called every time MQ pulses
 PLUGIN_API VOID OnPulse()
 {
-	// DONT leave in this debugspew, even if you leave in all the others
-	//DebugSpewAlways("MQ2React::OnPulse()");
 	static int pulse = 0;
 
 	if (GetGameState() != GAMESTATE_INGAME)
@@ -365,7 +364,6 @@ PLUGIN_API VOID OnPulse()
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].IsNone()) {
 			if (root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].As<std::string>() == "enabled") {
 				double result = 0;
-				DebugSpewAlways("Checking %s\n", nickname.c_str());
 				// Convert our condition from a std::string to something usable by mq2
 				char szLine[MAX_STRING] = { 0 };
 				strcpy_s(szLine, react["condition"].As<std::string>().c_str());
@@ -378,7 +376,6 @@ PLUGIN_API VOID OnPulse()
 				if (result != 0) {
 					char szAction[MAX_STRING] = { 0 };
 					strcpy_s(szAction, react["action"].As<std::string>().c_str());
-					DebugSpewAlways("Executing %s --> %s \n", nickname.c_str(), szAction);
 					EzCommand(szAction);
 				}
 			}
