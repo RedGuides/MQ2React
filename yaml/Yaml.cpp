@@ -2387,7 +2387,12 @@ namespace Yaml
                     AddEscapeTokens(key, "\\\"");
                     if(ShouldBeCited(key))
                     {
-                        stream << "\"" << key << "\"" << ": ";
+						if (key.find_first_of("\"") != std::string::npos) {
+							stream << "'" << key << "'" << ": ";
+						}
+						else {
+							stream << "\"" << key << "\"" << ": ";
+						}
                     }
                     else
                     {
@@ -2448,19 +2453,24 @@ namespace Yaml
                 else
                 {
                     const std::string frontLine = lines.front();
-                    if(config.ScalarMaxLength == 0 || lines.front().size() <= config.ScalarMaxLength ||
-                       LineFolding(frontLine, lines, config.ScalarMaxLength) == 1)
-                    {
-                        if(useLevel)
-                        {
-                             stream << std::string(level, ' ');
-                        }
+					if (config.ScalarMaxLength == 0 || lines.front().size() <= config.ScalarMaxLength ||
+						LineFolding(frontLine, lines, config.ScalarMaxLength) == 1)
+					{
+						if (useLevel)
+						{
+							stream << std::string(level, ' ');
+						}
 
-                        if(ShouldBeCited(value))
-                        {
-                            stream << "\"" << value << "\"\n";
-                            break;
-                        }
+						if (ShouldBeCited(value))
+						{
+							if (value.find_first_of("\"") != std::string::npos) {
+								stream << "'" << value << "'\n";
+							}
+							else {
+								stream << "\"" << value << "\"\n";
+							}
+							break;
+						}
                         stream << value << "\n";
                         break;
                     }
