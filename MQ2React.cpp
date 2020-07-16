@@ -180,7 +180,7 @@ public:
 	* React.Condition[nickname] -- Returns the condition associated with the react 'nickname'
 	* React.Enabled[nickname] -- Returns if the react 'nickname' is enabled or not
 	*/
-	bool GetMember(MQVarPtr VarPtr, PCHAR Member, PCHAR Index, MQTypeVar& Dest)
+	virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
 	{
 		// We create a copy of our root node as IsNone() actually will create nonexistent nodes when
 		// checked. This causes failed TLO checks to actually modify our yaml.
@@ -242,7 +242,7 @@ public:
 	{
 		return false;
 	}
-	bool FromString(MQVarPtr& VarPtr, PCHAR Source)
+	virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
 	{
 		return false;
 	}
