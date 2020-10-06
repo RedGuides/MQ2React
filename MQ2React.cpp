@@ -50,7 +50,7 @@ bool LoadConfig()
 	// tree matches the .yaml file if parsing failures occur. Waffling on this at the
 	// moment as I'm unsure about unintended consequences of doing this (react stops working
 	// until they fix their file for example).
-	root.Clear();
+	//root.Clear();
 	try {
 		Yaml::Parse(root, CONFIG_FILE.c_str());
 	}
@@ -64,22 +64,28 @@ bool LoadConfig()
 		return false;
 	}
 
+	bool dosave = false;
 	// Make sure the YAML Config is well structed -- Example globals section
-	if (root["globals"].IsNone())
+	if (root["globals"].IsNone()) {
 		root["globals"]["GlobalExample"] = "${Me.CombatState.NotEqual[COMBAT]} && ${Me.PctHPs} <= 25";
+		dosave = true;
+	}
 
 	// Make sure the YAML Config is well structed -- Example reacts section
 	if (root["reacts"].IsNone()) {
 		root["reacts"]["ExampleReact"]["condition"] = "${Me.PctHPs} == 100 && ${Me.CombatState.NotEqual[COMBAT]}";
 		root["reacts"]["ExampleReact"]["action"] = "/multiline ; /echo Default Example react Disables itself when you're at 100%HP and out of Combat ; /delay 5 ; /react disable ExampleReact";
+		dosave = true;
 	}
 
 	// Make sure the YAML Config is well structure -- Per character react list
-	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone())
+	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone()) {
 		root[EQADDR_SERVERNAME][pCharInfo->Name]["ExampleReact"] = "enabled";
-
-	// Save the default values we created if we created any
-	SaveConfig();
+		dosave = true;
+	}
+	// If we've made a change that needs saving, do our save.
+	if (dosave)
+		SaveConfig();
 
 	// Succesfully loaded the file
 	return true;
@@ -91,9 +97,9 @@ void PrintHelp()
 	WriteChatf("Ineract with MQ2React via /react <verb> <optarg> <optarg> <optarg>");
 	WriteChatf("Reaction configuration is per character name per character name in mq2react.ini.");
 	WriteChatf("/react help - display this message.");
-	WriteChatf("/react globaladd <name> <condition> -- add a new global condition with <name> and condition <condition>.");
+	WriteChatf("/react globaladd <name> <condition> -- add a new global condition with <name> and condition <condition>. Will overwrite <name> if it exists.");
 	WriteChatf("/react globalrem <name> -- removes the global condition that matches <name>.");
-	WriteChatf("/react add <nickname> <condition> <action> - add a new reaction to your config with <condition> and <action> labeled <nickname>. Disabled by default.");
+	WriteChatf("/react add <nickname> <condition> <action> - add a new reaction to your config with <condition> and <action> labeled <nickname>. Disabled by default. Will overwrite <name> if it exists.");
 	WriteChatf("/react remove <nickname> - remove a reaction from your config file that has the label <nickname> .");
 	WriteChatf("/react enable <nickname> - enable a reaction with label <nickname>.");
 	WriteChatf("/react disable <nickname> - disable a reaction with label <nickname>.");
@@ -129,6 +135,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (loadsuccessful) {
 			root["globals"][Nickname] = Condition;
 			SaveConfig();
+			WriteChatf("\ayMQ2React\ax --> Added Global %s", Nickname);
 		}
 	}
 	if (!_stricmp(Verb, "globalrem")) {
@@ -139,6 +146,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (loadsuccessful) {
 			root["globals"].Erase(Nickname);
 			SaveConfig();
+			WriteChatf("\ayMQ2React\ax --> Removed Global %s", Nickname);
 		}
 	}
 	if (!_stricmp(Verb, "add")) {
@@ -162,6 +170,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 			root["reacts"][Nickname]["action"] = Action;
 			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
 			SaveConfig();
+			WriteChatf("\ayMQ2React\ax --> Added React %s \ar[DISABLED]\ax", Nickname);
 		}
 	}
 	if (!_stricmp(Verb, "remove")) {
@@ -172,6 +181,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (loadsuccessful) {
 			root["reacts"].Erase(Nickname);
 			SaveConfig();
+			WriteChatf("\ayMQ2React\ax --> Removing React %s", Nickname);
 		}
 	}
 	if (!_stricmp(Verb, "enable")) {
@@ -180,9 +190,11 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 
 		loadsuccessful = LoadConfig();
 		if (loadsuccessful) {
-			if (!root["reacts"][Nickname].IsNone())
+			if (!root["reacts"][Nickname].IsNone()) {
 				root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
-			SaveConfig();
+				SaveConfig();
+				WriteChatf("\ayMQ2React\ax --> %s \ag[ENABLED]\ax", Nickname);
+			}
 		}
 	}
 	if (!_stricmp(Verb, "disable")) {
@@ -191,17 +203,22 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 
 		loadsuccessful = LoadConfig();
 		if (loadsuccessful) {
-			if (!root["reacts"][Nickname].IsNone())
+			if (!root["reacts"][Nickname].IsNone()) {
 				root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
-			SaveConfig();
+				SaveConfig();
+				WriteChatf("\ayMQ2React\ax --> %s \ar[DISABLED]\ax", Nickname);
+			}
 		}
 	}
-	if (!_stricmp(Verb, "reload"))
+	if (!_stricmp(Verb, "reload")) {
 		loadsuccessful = LoadConfig();
+		WriteChatf("\ayMQ2React\ax --> Reloading");
+	}
 	if (!_stricmp(Verb, "save")) {
 		loadsuccessful = LoadConfig();
 		if (loadsuccessful) {
 			SaveConfig();
+			WriteChatf("\ayMQ2React\ax --> Saving");
 		}
 	}
 	if (!_stricmp(Verb, "list"))
