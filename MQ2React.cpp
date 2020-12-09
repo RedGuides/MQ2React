@@ -78,6 +78,11 @@ bool LoadConfig()
 		dosave = true;
 	}
 
+	// Make sure our default sleep value is saved. Run every 15 frames.
+	if (root["sleep_frames"].IsNone()) {
+		root["sleep_frames"] = "15";
+	}
+
 	// Make sure the YAML Config is well structure -- Per character react list
 	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone()) {
 		root[EQADDR_SERVERNAME][pCharInfo->Name]["ExampleReact"] = "enabled";
@@ -106,6 +111,7 @@ void PrintHelp()
 	WriteChatf("/react list - Display all condition nicknames.");
 	WriteChatf("/react reload - Reloads the mq2react config.");
 	WriteChatf("/react save - Saves the current in-memory configuration to the react config. add, remove, enable, and disable do this automatically.");
+	WriteChatf("/react sleep # - Sleeps for # of frames between checking reacts.");
 }
 
 // Parse /react <verb> <opt:nickname> <opt:condition> <opt:action>
@@ -212,7 +218,11 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 	}
 	if (!_stricmp(Verb, "reload")) {
 		loadsuccessful = LoadConfig();
-		WriteChatf("\ayMQ2React\ax --> Reloading");
+		if (loadsuccessful) {
+			WriteChatf("\ayMQ2React\ax --> Reloading");
+		} else {
+			WriteChatf("\ayMQ2React\ax --> \arERROR\ax Reloading");
+		}
 	}
 	if (!_stricmp(Verb, "save")) {
 		loadsuccessful = LoadConfig();
@@ -223,6 +233,23 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 	}
 	if (!_stricmp(Verb, "list"))
 		PrintReacts();
+	if (!_stricmp(Verb, "sleep")) {
+		loadsuccessful = LoadConfig();
+		if (loadsuccessful) {
+			char SleepTime[MAX_STRING] = { 0 };
+			GetArg(SleepTime, szLine, 2);
+			// If value can't be converted, msvc++ will return 0.
+			int sleep = atoi(SleepTime);
+			if (sleep < 1) {
+				// Erroneous value
+				WriteChatf("\ayMQ2React\ax --> Bad sleep value %d. Must be greater than 1.", sleep);
+			} else {
+				WriteChatf("\ayMQ2React\ax --> Now reacting every %d frames.", sleep);
+				root["sleep_frames"] = SleepTime;
+				SaveConfig();
+			}
+		}
+	}
 }
 
 class MQ2ReactType : public MQ2Type {
@@ -365,7 +392,7 @@ PLUGIN_API VOID OnPulse()
 	// We've not yet loaded our configuration if mini-yaml finds root node is None
 	if (root.IsNone()) return;
 
-	if (++pulse < REACT_SLEEP)
+	if (++pulse < root["sleep_frames"].As<unsigned int>())
 		return;
 
 	// Time to wake-up
