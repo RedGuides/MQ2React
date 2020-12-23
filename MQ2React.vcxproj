@@ -50,10 +50,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="MQ2React.cpp" />
-    <ClCompile Include="..\..\contrib\mini-yaml\yaml\Yaml.cpp" />
+    <ClCompile Include="yaml\Yaml.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="yaml\Yaml.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MQ2React.rc" />

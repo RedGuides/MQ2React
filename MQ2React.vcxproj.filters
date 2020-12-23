@@ -10,20 +10,23 @@
     <Filter Include="Resource Files">
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
     </Filter>
-    <Filter Include="Source Files\Contrib">
+    <Filter Include="Header Files\mini-yaml">
     </Filter>
-    <Filter Include="Source Files\Contrib\mini-yaml">
+    <Filter Include="Source Files\mini-yaml">
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MQ2React.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\contrib\mini-yaml\yaml\Yaml.cpp">
-      <Filter>Source Files\Contrib\mini-yaml</Filter>
+    <ClCompile Include="yaml\Yaml.cpp">
+      <Filter>Source Files\mini-yaml</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="yaml\Yaml.hpp">
+      <Filter>Header Files\mini-yaml</Filter>
+    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>

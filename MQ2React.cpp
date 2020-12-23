@@ -5,18 +5,19 @@
 // are shown below. Remove the ones your plugin does not use.  Always use Initialize
 // and Shutdown for setup and cleanup, do NOT do it in DllMain.
 #include <mq/Plugin.h>
-#include <Yaml.hpp>
+#include "yaml/Yaml.hpp"
 
 PreSetup("MQ2React");
 PLUGIN_VERSION(0.1);
 
 // Constants
-constexpr int REACT_SLEEP = 50;
 static const std::string CONFIG_FILE = std::string(gPathConfig) + "\\MQ2React.yaml";
 
 // Global Declarations
 static Yaml::Node root;
 class MQ2ReactType* pReactType = nullptr;
+// TODO:  Handle this in the on-pulse, this is a quick fix to lessen resource usage
+int sleep_frames = 15;
 
 void PrintReacts() {
 	Yaml::Node& Reacts = root["reacts"];
@@ -82,6 +83,7 @@ bool LoadConfig()
 	if (root["sleep_frames"].IsNone()) {
 		root["sleep_frames"] = "15";
 	}
+	sleep_frames = root["sleep_frames"].As<int>();
 
 	// Make sure the YAML Config is well structure -- Per character react list
 	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone()) {
@@ -239,7 +241,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 			char SleepTime[MAX_STRING] = { 0 };
 			GetArg(SleepTime, szLine, 2);
 			// If value can't be converted, msvc++ will return 0.
-			int sleep = atoi(SleepTime);
+			const int sleep = GetIntFromString(SleepTime, 0);
 			if (sleep < 1) {
 				// Erroneous value
 				WriteChatf("\ayMQ2React\ax --> Bad sleep value %d. Must be greater than 1.", sleep);
@@ -392,7 +394,7 @@ PLUGIN_API void OnPulse()
 	// We've not yet loaded our configuration if mini-yaml finds root node is None
 	if (root.IsNone()) return;
 
-	if (++pulse < root["sleep_frames"].As<unsigned int>())
+	if (++pulse < sleep_frames)
 		return;
 
 	// Time to wake-up
@@ -407,16 +409,17 @@ PLUGIN_API void OnPulse()
 		// Only check the react if it is enabled for the current character on the current server
 		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].IsNone()) {
 			if (root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].As<std::string>() == "enabled") {
-				double result = 0;
 				// Convert our condition from a std::string to something usable by mq2
 				char szLine[MAX_STRING] = { 0 };
 				strcpy_s(szLine, react["condition"].As<std::string>().c_str());
 
 				// ParseMacroData will resolve any TLOs in our action string
 				ParseMacroData(szLine, MAX_STRING);
-				// Calculate will return a DWORD result, if the result is non-zero it's true and we'll add to our queue
+				// Calculate, if the result is non-zero it's true and we'll add to our queue
+				double result = 0.0;
 				Calculate(szLine, result);
 
+				// FIXME:  Floating point comparison to zero
 				if (result != 0) {
 					char szAction[MAX_STRING] = { 0 };
 					strcpy_s(szAction, react["action"].As<std::string>().c_str());
@@ -426,4 +429,3 @@ PLUGIN_API void OnPulse()
 		}
 	}
 }
-
