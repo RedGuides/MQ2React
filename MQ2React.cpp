@@ -293,8 +293,8 @@ public:
 			case Action:
 				if (Index && Index[0] != '\0') {
 					if (!rootcopy["reacts"][Index]["action"].IsNone()) {
-						strcpy_s(_buf, rootcopy["reacts"][Index]["action"].As<std::string>().c_str());
-						Dest.Ptr = &_buf[0];
+						strcpy_s(DataTypeTemp, rootcopy["reacts"][Index]["action"].As<std::string>().c_str());
+						Dest.Ptr = &DataTypeTemp[0];
 						Dest.Type = mq::datatypes::pStringType;
 					}
 				}
@@ -302,8 +302,8 @@ public:
 			case Condition:
 				if (Index && Index[0] != '\0') {
 					if (!rootcopy["reacts"][Index]["condition"].IsNone()) {
-						strcpy_s(_buf, rootcopy["reacts"][Index]["condition"].As<std::string>().c_str());
-						Dest.Ptr = &_buf[0];
+						strcpy_s(DataTypeTemp, rootcopy["reacts"][Index]["condition"].As<std::string>().c_str());
+						Dest.Ptr = &DataTypeTemp[0];
 						Dest.Type = mq::datatypes::pStringType;
 					}
 				}
@@ -324,8 +324,8 @@ public:
 			case Global:
 				if (Index && Index[0] != '\0') {
 					if (!rootcopy["globals"][Index].IsNone()) {
-						strcpy_s(_buf, rootcopy["globals"][Index].As<std::string>().c_str());
-						Dest.Ptr = &_buf[0];
+						strcpy_s(DataTypeTemp, rootcopy["globals"][Index].As<std::string>().c_str());
+						Dest.Ptr = &DataTypeTemp[0];
 						Dest.Type = mq::datatypes::pStringType;
 					}
 				}
@@ -334,17 +334,6 @@ public:
 				return false;
 		}
 	}
-
-	bool FromData(MQVarPtr& VarPtr, MQTypeVar& Source)
-	{
-		return false;
-	}
-	virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
-	{
-		return false;
-	}
-private:
-	CHAR _buf[MAX_STRING] = { 0 };
 };
 
 bool TLOReact(const char* szIndex, MQTypeVar& Dest)
