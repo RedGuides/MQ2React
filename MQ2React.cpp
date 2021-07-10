@@ -58,7 +58,7 @@ bool LoadConfig()
 	catch (const Yaml::Exception e) {
 		char Error[MAX_STRING] = { 0 };
 		strcpy_s(Error, e.Message());
-		WriteChatf("Error parsingv mq2react configuration:");
+		WriteChatf("Error parsing mq2react configuration:");
 		WriteChatf(Error);
 		// Exit early to avoid rewriting the users file as 'root' will be empty.
 		// Notify we've uncessfully loaded the file.
@@ -170,7 +170,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		GetArg(Action, szLine, 4);
 		if (!strlen(Action)) PrintHelp();
 
-		// We reload the YAML file in case it was changed prior to our last load so we 
+		// We reload the YAML file in case it was changed prior to our last load so we
 		// do not erase changes made elsewhere. This pattern continues below.
 		loadsuccessful = LoadConfig();
 		if (loadsuccessful) {
