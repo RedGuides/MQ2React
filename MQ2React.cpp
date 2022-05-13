@@ -41,7 +41,7 @@ bool LoadConfig()
 {
 	PCHARINFO pCharInfo = GetCharInfo();
 	if (!pCharInfo) return false;
-	if (!EQADDR_SERVERNAME[0]) return false;
+	if (!GetServerShortName()[0]) return false;
 
 	if (!_FileExists(CONFIG_FILE.c_str()))
 		SaveConfig();
@@ -86,8 +86,8 @@ bool LoadConfig()
 	sleep_frames = root["sleep_frames"].As<int>();
 
 	// Make sure the YAML Config is well structure -- Per character react list
-	if (root[EQADDR_SERVERNAME][pCharInfo->Name].IsNone()) {
-		root[EQADDR_SERVERNAME][pCharInfo->Name]["ExampleReact"] = "enabled";
+	if (root[GetServerShortName()][pCharInfo->Name].IsNone()) {
+		root[GetServerShortName()][pCharInfo->Name]["ExampleReact"] = "enabled";
 		dosave = true;
 	}
 	// If we've made a change that needs saving, do our save.
@@ -176,7 +176,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		if (loadsuccessful) {
 			root["reacts"][Nickname]["condition"] = Condition;
 			root["reacts"][Nickname]["action"] = Action;
-			root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
+			root[GetServerShortName()][pCharInfo->Name][Nickname] = "disabled";
 			SaveConfig();
 			WriteChatf("\ayMQ2React\ax --> Added React %s \ar[DISABLED]\ax", Nickname);
 		}
@@ -199,7 +199,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		loadsuccessful = LoadConfig();
 		if (loadsuccessful) {
 			if (!root["reacts"][Nickname].IsNone()) {
-				root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "enabled";
+				root[GetServerShortName()][pCharInfo->Name][Nickname] = "enabled";
 				SaveConfig();
 				WriteChatf("\ayMQ2React\ax --> %s \ag[ENABLED]\ax", Nickname);
 			}
@@ -212,7 +212,7 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 		loadsuccessful = LoadConfig();
 		if (loadsuccessful) {
 			if (!root["reacts"][Nickname].IsNone()) {
-				root[EQADDR_SERVERNAME][pCharInfo->Name][Nickname] = "disabled";
+				root[GetServerShortName()][pCharInfo->Name][Nickname] = "disabled";
 				SaveConfig();
 				WriteChatf("\ayMQ2React\ax --> %s \ar[DISABLED]\ax", Nickname);
 			}
@@ -310,8 +310,8 @@ public:
 				return true;
 			case Enabled:
 				if (Index && Index[0] != '\0') {
-					if (!rootcopy[EQADDR_SERVERNAME][pCharInfo->Name][Index].IsNone()) {
-						if (rootcopy[EQADDR_SERVERNAME][pCharInfo->Name][Index].As<std::string>() == "enabled") {
+					if (!rootcopy[GetServerShortName()][pCharInfo->Name][Index].IsNone()) {
+						if (rootcopy[GetServerShortName()][pCharInfo->Name][Index].As<std::string>() == "enabled") {
 							Dest.Int = 1;
 						}
 						else {
@@ -396,8 +396,8 @@ PLUGIN_API void OnPulse()
 		Yaml::Node& react = (*itr).second;
 
 		// Only check the react if it is enabled for the current character on the current server
-		if (!root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].IsNone()) {
-			if (root[EQADDR_SERVERNAME][pCharInfo->Name][nickname].As<std::string>() == "enabled") {
+		if (!root[GetServerShortName()][pCharInfo->Name][nickname].IsNone()) {
+			if (root[GetServerShortName()][pCharInfo->Name][nickname].As<std::string>() == "enabled") {
 				// Convert our condition from a std::string to something usable by mq2
 				char szLine[MAX_STRING] = { 0 };
 				strcpy_s(szLine, react["condition"].As<std::string>().c_str());
