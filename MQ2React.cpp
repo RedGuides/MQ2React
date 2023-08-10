@@ -18,6 +18,7 @@ static Yaml::Node root;
 class MQ2ReactType* pReactType = nullptr;
 // TODO:  Handle this in the on-pulse, this is a quick fix to lessen resource usage
 int sleep_frames = 15;
+bool bActive = true;
 
 void PrintReacts() {
 	Yaml::Node& Reacts = root["reacts"];
@@ -114,6 +115,8 @@ void PrintHelp()
 	WriteChatf("/react reload - Reloads the mq2react config.");
 	WriteChatf("/react save - Saves the current in-memory configuration to the react config. add, remove, enable, and disable do this automatically.");
 	WriteChatf("/react sleep # - Sleeps for # of frames between checking reacts.");
+	WriteChatf("/react off - Turns off react processing.");
+	WriteChatf("/react on - Turns on react processing.");
 }
 
 // Parse /react <verb> <opt:nickname> <opt:condition> <opt:action>
@@ -129,6 +132,14 @@ VOID ReactCommand(PSPAWNINFO pChar, PCHAR szLine)
 
 	if (!_stricmp(Verb, "help")) {
 		PrintHelp();
+	}
+	if (!_stricmp(Verb, "on")) {
+		WriteChatf("\ayMQ2React\ax --> Processing is on");
+		bActive = true;
+	}
+	if (!_stricmp(Verb, "off")) {
+		WriteChatf("\ayMQ2React\ax --> Processing is off");
+		bActive = false;
 	}
 	if (!_stricmp(Verb, "globaladd")) {
 		char Condition[MAX_STRING] = { 0 };
@@ -260,7 +271,8 @@ public:
 		Action,
 		Condition,
 		Enabled,
-		Global
+		Global,
+		Active
 	};
 
 	MQ2ReactType() :MQ2Type("React")
@@ -269,6 +281,7 @@ public:
 		TypeMember(Condition);
 		TypeMember(Enabled);
 		TypeMember(Global);
+		TypeMember(Active);
 	}
 	~MQ2ReactType() {}
 
@@ -330,6 +343,10 @@ public:
 					}
 				}
 				return true;
+			case Active:
+				Dest.Int = bActive ? 1 : 0;
+				Dest.Type = mq::datatypes::pBoolType;
+				return true;
 			default:
 				return false;
 		}
@@ -382,6 +399,8 @@ PLUGIN_API void OnPulse()
 
 	// We've not yet loaded our configuration if mini-yaml finds root node is None
 	if (root.IsNone()) return;
+
+	if (!bActive) return;
 
 	if (++pulse < sleep_frames)
 		return;
