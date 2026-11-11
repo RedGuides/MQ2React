@@ -10,9 +10,9 @@ Holds the React data type, which is far more interesting.
 
 ## Forms
 <!--tlo-forms-start-->
-### {{ renderMember(type='React', name='React') }}
-
-:   Returns the word "React" if loaded.
+/// member | React React
+Returns the word "React" if loaded.
+///
 
 <!--tlo-forms-end-->
 
